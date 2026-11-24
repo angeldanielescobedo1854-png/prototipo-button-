@@ -1,22 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Enviar SMS desde el botón sin abrir ninguna app -->
+    <!-- Enviar SMS desde un botón o mensaje programado, sin abrir ninguna app -->
     <uses-permission android:name="android.permission.SEND_SMS" />
     <!-- Enviar mensajes por Telegram (bot) -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Mostrar la respuesta de la IA como notificación -->
+    <!-- Avisos de mensajes programados -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Programar a la hora exacta y reprogramar al reiniciar -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="false" />
 
-    <!-- Para poder listar las apps instaladas y sacar sus iconos (sin permiso especial) -->
+    <!-- Para listar apps instaladas y sacar sus iconos (sin permiso especial) -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <package android:name="com.anthropic.claude" />
+        <package android:name="com.openai.chatgpt" />
+        <package android:name="com.google.android.apps.bard" />
+        <package android:name="com.microsoft.copilot" />
+        <package android:name="ai.perplexity.app.android" />
+        <package android:name="com.deepseek.chat" />
+        <package android:name="ai.x.grok" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="org.telegram.messenger.web" />
+        <package android:name="org.thunderdog.challegram" />
+        <package android:name="org.thoughtcrime.securesms" />
+        <package android:name="com.facebook.orca" />
+        <package android:name="com.discord" />
     </queries>
 
     <application
@@ -35,6 +53,51 @@
             </intent-filter>
         </activity>
 
+        <!-- Widget de chat -->
+        <receiver
+            android:name=".ChatWidget"
+            android:exported="true"
+            android:label="Chat rápido">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/chat_widget_info" />
+        </receiver>
+
+        <activity
+            android:name=".WidgetConfigActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Cuadro flotante para escribir / programar -->
+        <activity
+            android:name=".ComposeActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Material.Light.Dialog"
+            android:windowSoftInputMode="stateVisible|adjustResize" />
+
+        <!-- Mensajes programados -->
+        <receiver
+            android:name=".AlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Botones del Centro de Control -->
         <service
             android:name=".Tile1"
             android:exported="true"

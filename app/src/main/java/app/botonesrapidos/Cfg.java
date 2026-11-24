@@ -16,7 +16,7 @@ final class Cfg {
 
     // Los números de las primeras 5 acciones no cambian para no perder lo ya guardado.
     static final int A_APP = 0, A_URL = 1, A_DIAL = 2, A_WHATSAPP = 3, A_TORCH = 4,
-            A_SMS = 5, A_TELEGRAM = 6, A_AI = 7;
+            A_SMS = 5, A_TELEGRAM = 6;
 
     static final String[] ACTION_NAMES = {
             "Abrir una app",
@@ -25,8 +25,7 @@ final class Cfg {
             "Abrir chat de WhatsApp (con mensaje escrito)",
             "Linterna (encender/apagar)",
             "Enviar SMS sin abrir ninguna app",
-            "Enviar mensaje por Telegram (bot) sin abrir app",
-            "Enviar mensaje a una IA (Claude, ChatGPT, Gemini) sin abrir app"
+            "Enviar mensaje por Telegram (bot) sin abrir app"
     };
 
     static final String[] ICON_NAMES = {
@@ -74,7 +73,8 @@ final class Cfg {
     }
 
     static int action(Context c, int s) {
-        return p(c).getInt("action" + s, A_APP);
+        int a = p(c).getInt("action" + s, A_APP);
+        return (a >= 0 && a < ACTION_NAMES.length) ? a : A_APP;
     }
 
     static String value(Context c, int s) {
@@ -86,18 +86,13 @@ final class Cfg {
         return p(c).getString("extra" + s, "");
     }
 
-    /** Mensaje de texto (WhatsApp, SMS, Telegram, IA). */
+    /** Mensaje de texto (WhatsApp, SMS, Telegram). */
     static String msg(Context c, int s) {
         return p(c).getString("msg" + s, "");
     }
 
-    /** Modelo de la IA (vacío = el de por defecto). */
-    static String model(Context c, int s) {
-        return p(c).getString("model" + s, "");
-    }
-
     static void save(Context c, int s, String label, int icon, int iconMode, boolean mono,
-                     int action, String value, String extra, String msg, String model) {
+                     int action, String value, String extra, String msg) {
         p(c).edit()
                 .putString("label" + s, label)
                 .putInt("icon" + s, icon)
@@ -107,7 +102,6 @@ final class Cfg {
                 .putString("value" + s, value)
                 .putString("extra" + s, extra)
                 .putString("msg" + s, msg)
-                .putString("model" + s, model)
                 .apply();
     }
 

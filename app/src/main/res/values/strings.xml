@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Botones Rápidos</string>
+    <string name="widget_desc">Chat rápido: escribe o programa un mensaje para tu IA o contacto</string>
 </resources>

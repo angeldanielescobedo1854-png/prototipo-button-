@@ -31,10 +31,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
 
@@ -44,7 +47,6 @@ public class MainActivity extends Activity {
 
     private static final int REQ_PHOTO = 100;
     private static final int REQ_SMS = 200;
-    private static final int REQ_NOTIF = 300;
 
     private final List<String> appLabels = new ArrayList<>();
     private final List<String> appPkgs = new ArrayList<>();
@@ -61,10 +63,10 @@ public class MainActivity extends Activity {
     private final EditText[] valueEt = new EditText[Cfg.SLOTS];
     private final EditText[] extraEt = new EditText[Cfg.SLOTS];
     private final EditText[] msgEt = new EditText[Cfg.SLOTS];
-    private final Spinner[] aiSp = new Spinner[Cfg.SLOTS];
-    private final EditText[] modelEt = new EditText[Cfg.SLOTS];
     /** Modos de icono disponibles ahora mismo en cada botón (según la acción elegida). */
     private final int[][] iconModeMap = new int[Cfg.SLOTS][];
+
+    private LinearLayout schedBox;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,11 +82,17 @@ public class MainActivity extends Activity {
         root.addView(text("Botones Rápidos", 26, true));
 
         TextView help = text(
-                "Configura hasta 5 botones y guárdalos. Luego abre el Centro de Control, "
-                        + "toca el lápiz (editar) y arrastra “Botón 1…5” al panel. "
-                        + "En Android 13+ también puedes usar “Añadir al panel”.", 14, false);
+                "BOTONES: configura hasta 5 y guárdalos. Luego abre el Centro de Control, "
+                        + "toca el lápiz (editar) y arrastra “Botón 1…5” al panel.\n\n"
+                        + "WIDGET DE CHAT: mantén presionada la pantalla de inicio, elige Widgets y "
+                        + "busca “Botones Rápidos”. Ahí eliges tu IA o chat y puedes enviar o "
+                        + "programar mensajes.", 14, false);
         help.setPadding(0, dp(8), 0, dp(8));
         root.addView(help);
+
+        schedBox = new LinearLayout(this);
+        schedBox.setOrientation(LinearLayout.VERTICAL);
+        root.addView(schedBox);
 
         for (int s = 0; s < Cfg.SLOTS; s++) {
             root.addView(buildCard(s));
@@ -92,6 +100,49 @@ public class MainActivity extends Activity {
 
         setContentView(scroll);
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshScheduled();
+    }
+
+    // ---------- Mensajes programados ----------
+
+    private void refreshScheduled() {
+        schedBox.removeAllViews();
+        List<ScheduleStore.Pending> list = ScheduleStore.all(this);
+        schedBox.addView(text("Mensajes programados", 17, true));
+        if (list.isEmpty()) {
+            schedBox.addView(small("No hay mensajes pendientes. Prográmalos desde el widget (botón del reloj)."));
+            return;
+        }
+        SimpleDateFormat f = new SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault());
+        for (final ScheduleStore.Pending p : list) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setPadding(0, dp(6), 0, 0);
+            TextView t = text("⏰ " + f.format(new Date(p.when)) + "\n"
+                    + p.dest.chatName() + " (" + p.dest.appName() + "): " + p.text, 13, false);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            row.addView(t, lp);
+            Button cancel = new Button(this);
+            cancel.setText("Cancelar");
+            cancel.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Scheduler.cancel(MainActivity.this, p.id);
+                    ScheduleStore.remove(MainActivity.this, p.id);
+                    refreshScheduled();
+                }
+            });
+            row.addView(cancel);
+            schedBox.addView(row);
+        }
+    }
+
+    // ---------- Tarjeta de cada botón ----------
 
     private View buildCard(final int s) {
         LinearLayout card = new LinearLayout(this);
@@ -179,41 +230,15 @@ public class MainActivity extends Activity {
         if (idx >= 0) appSp[s].setSelection(idx);
         card.addView(appSp[s]);
 
-        aiSp[s] = new Spinner(this);
-        aiSp[s].setAdapter(new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, AiClient.NAMES));
-        if (action == Cfg.A_AI) {
-            try {
-                aiSp[s].setSelection(Integer.parseInt(Cfg.value(this, s).trim()));
-            } catch (Exception ignored) {
-            }
-        }
-        aiSp[s].setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                updateModelHint(s);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-        card.addView(aiSp[s]);
-
         valueEt[s] = new EditText(this);
         valueEt[s].setSingleLine(true);
-        if (action != Cfg.A_APP && action != Cfg.A_AI) valueEt[s].setText(Cfg.value(this, s));
+        if (action != Cfg.A_APP) valueEt[s].setText(Cfg.value(this, s));
         card.addView(valueEt[s]);
 
         extraEt[s] = new EditText(this);
         extraEt[s].setSingleLine(true);
         extraEt[s].setText(Cfg.extra(this, s));
         card.addView(extraEt[s]);
-
-        modelEt[s] = new EditText(this);
-        modelEt[s].setSingleLine(true);
-        modelEt[s].setText(Cfg.model(this, s));
-        card.addView(modelEt[s]);
 
         msgEt[s] = new EditText(this);
         msgEt[s].setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -296,25 +321,16 @@ public class MainActivity extends Activity {
         updateIconUi(s, modes[sel]);
     }
 
-    private void updateModelHint(int s) {
-        int p = aiSp[s].getSelectedItemPosition();
-        if (p < 0 || p >= AiClient.DEFAULT_MODELS.length) p = 0;
-        modelEt[s].setHint("Modelo (vacío = " + AiClient.DEFAULT_MODELS[p] + ")");
-    }
-
     private void updateValueUi(int s, int action) {
         refreshIconSources(s, action);
         appSp[s].setVisibility(action == Cfg.A_APP ? View.VISIBLE : View.GONE);
-        aiSp[s].setVisibility(action == Cfg.A_AI ? View.VISIBLE : View.GONE);
 
         boolean needsValue = action == Cfg.A_URL || action == Cfg.A_DIAL
                 || action == Cfg.A_WHATSAPP || action == Cfg.A_SMS || action == Cfg.A_TELEGRAM;
         valueEt[s].setVisibility(needsValue ? View.VISIBLE : View.GONE);
-        extraEt[s].setVisibility(action == Cfg.A_TELEGRAM || action == Cfg.A_AI
-                ? View.VISIBLE : View.GONE);
-        modelEt[s].setVisibility(action == Cfg.A_AI ? View.VISIBLE : View.GONE);
+        extraEt[s].setVisibility(action == Cfg.A_TELEGRAM ? View.VISIBLE : View.GONE);
         boolean needsMsg = action == Cfg.A_WHATSAPP || action == Cfg.A_SMS
-                || action == Cfg.A_TELEGRAM || action == Cfg.A_AI;
+                || action == Cfg.A_TELEGRAM;
         msgEt[s].setVisibility(needsMsg ? View.VISIBLE : View.GONE);
 
         String note = "";
@@ -348,14 +364,6 @@ public class MainActivity extends Activity {
                 msgEt[s].setHint("Mensaje que se enviará");
                 note = "Usa un bot tuyo de Telegram. El bot solo puede escribirle a quien le "
                         + "haya dado /start o a grupos donde esté, no a cualquier contacto.";
-                break;
-            case Cfg.A_AI:
-                extraEt[s].setHint("Tu clave de API de esa IA");
-                msgEt[s].setHint("Mensaje o pregunta que se enviará");
-                updateModelHint(s);
-                note = "Se envía directo a la IA con tu propia clave de API (se cobra aparte de "
-                        + "la suscripción de su app). Cada toque es una conversación nueva: la "
-                        + "respuesta llega como notificación y no aparece dentro de la app de la IA.";
                 break;
             default:
                 break;
@@ -396,10 +404,6 @@ public class MainActivity extends Activity {
             toast(ok ? "Permiso de SMS concedido ✔"
                     : "Sin permiso de SMS el botón no podrá enviar. Si no te deja activarlo: "
                     + "Ajustes > Apps > Botones Rápidos > ⋮ > Permitir ajustes restringidos.");
-        } else if (requestCode == REQ_NOTIF) {
-            boolean ok = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-            toast(ok ? "Notificaciones activadas ✔"
-                    : "Sin notificaciones la respuesta de la IA solo se verá unos segundos en pantalla.");
         }
     }
 
@@ -420,16 +424,6 @@ public class MainActivity extends Activity {
             if (i >= 0 && i < appPkgs.size()) value = appPkgs.get(i);
             if (value.isEmpty()) {
                 toast("Elige una app");
-                return false;
-            }
-        } else if (action == Cfg.A_AI) {
-            value = String.valueOf(Math.max(0, aiSp[s].getSelectedItemPosition()));
-            if (extra.isEmpty()) {
-                toast("Falta tu clave de API");
-                return false;
-            }
-            if (msg.isEmpty()) {
-                toast("Escribe el mensaje que se enviará");
                 return false;
             }
         } else if (action != Cfg.A_TORCH) {
@@ -480,18 +474,12 @@ public class MainActivity extends Activity {
             }
         }
 
-        String model = action == Cfg.A_AI ? modelEt[s].getText().toString().trim() : "";
         Cfg.save(this, s, name, iconSp[s].getSelectedItemPosition(), iconMode, mono,
-                action, value, extra, msg, model);
+                action, value, extra, msg);
 
         if (action == Cfg.A_SMS && checkSelfPermission(Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.SEND_SMS}, REQ_SMS);
-        }
-        if (action == Cfg.A_AI && Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIF);
         }
 
         TileService.requestListeningState(this, new ComponentName(this, TILES[s]));
