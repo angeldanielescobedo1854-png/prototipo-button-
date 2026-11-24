@@ -16,7 +16,7 @@ final class Cfg {
 
     // Los números de las primeras 5 acciones no cambian para no perder lo ya guardado.
     static final int A_APP = 0, A_URL = 1, A_DIAL = 2, A_WHATSAPP = 3, A_TORCH = 4,
-            A_SMS = 5, A_TELEGRAM = 6;
+            A_SMS = 5, A_TELEGRAM = 6, A_AI = 7;
 
     static final String[] ACTION_NAMES = {
             "Abrir una app",
@@ -25,7 +25,8 @@ final class Cfg {
             "Abrir chat de WhatsApp (con mensaje escrito)",
             "Linterna (encender/apagar)",
             "Enviar SMS sin abrir ninguna app",
-            "Enviar mensaje por Telegram (bot) sin abrir app"
+            "Enviar mensaje por Telegram (bot) sin abrir app",
+            "Enviar mensaje a una IA (Claude, ChatGPT, Gemini) sin abrir app"
     };
 
     static final String[] ICON_NAMES = {
@@ -85,13 +86,18 @@ final class Cfg {
         return p(c).getString("extra" + s, "");
     }
 
-    /** Mensaje de texto (WhatsApp, SMS, Telegram). */
+    /** Mensaje de texto (WhatsApp, SMS, Telegram, IA). */
     static String msg(Context c, int s) {
         return p(c).getString("msg" + s, "");
     }
 
+    /** Modelo de la IA (vacío = el de por defecto). */
+    static String model(Context c, int s) {
+        return p(c).getString("model" + s, "");
+    }
+
     static void save(Context c, int s, String label, int icon, int iconMode, boolean mono,
-                     int action, String value, String extra, String msg) {
+                     int action, String value, String extra, String msg, String model) {
         p(c).edit()
                 .putString("label" + s, label)
                 .putInt("icon" + s, icon)
@@ -101,6 +107,7 @@ final class Cfg {
                 .putString("value" + s, value)
                 .putString("extra" + s, extra)
                 .putString("msg" + s, msg)
+                .putString("model" + s, model)
                 .apply();
     }
 
@@ -124,18 +131,9 @@ final class Cfg {
         return Icon.createWithResource(c, iconRes(c, s));
     }
 
-    /** Paquetes cuyo icono se puede usar para esta acción (vacío si no aplica). */
-    static String[] iconPackages(int action, String value) {
-        switch (action) {
-            case A_APP:
-                return value.isEmpty() ? new String[0] : new String[]{value};
-            case A_WHATSAPP:
-                return new String[]{"com.whatsapp", "com.whatsapp.w4b"};
-            case A_TELEGRAM:
-                return new String[]{"org.telegram.messenger"};
-            default:
-                return new String[0];
-        }
+    /** Solo "Abrir una app" puede usar el icono de esa app. */
+    static boolean hasAppIcon(int action) {
+        return action == A_APP;
     }
 
     /** Devuelve el Intent de la acción, o null si no hay (o aún no está configurado). */

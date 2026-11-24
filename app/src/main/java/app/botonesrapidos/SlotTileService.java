@@ -1,6 +1,9 @@
 package app.botonesrapidos;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -85,6 +88,9 @@ public abstract class SlotTileService extends TileService {
                 return;
             case Cfg.A_TELEGRAM:
                 sendTelegram();
+                return;
+            case Cfg.A_AI:
+                sendAi();
                 return;
             default:
                 break;
@@ -192,6 +198,77 @@ public abstract class SlotTileService extends TileService {
                 });
             }
         }).start();
+    }
+
+    // ---------- Mensaje a una IA (sin abrir su app) ----------
+
+    private void sendAi() {
+        int provider;
+        try {
+            provider = Integer.parseInt(Cfg.value(this, slot()).trim());
+        } catch (NumberFormatException e) {
+            provider = -1;
+        }
+        final String key = Cfg.extra(this, slot()).trim();
+        final String text = Cfg.msg(this, slot()).trim();
+        String m = Cfg.model(this, slot()).trim();
+        if (provider < 0 || provider >= AiClient.NAMES.length || key.isEmpty() || text.isEmpty()) {
+            openConfig();
+            return;
+        }
+        final int prov = provider;
+        final String model = m.isEmpty() ? AiClient.DEFAULT_MODELS[prov] : m;
+        final String name = AiClient.NAMES[prov];
+        final int notifId = 1000 + slot();
+        final Context app = getApplicationContext();
+        final Handler main = new Handler(Looper.getMainLooper());
+
+        toast("Enviando a " + name + "… la respuesta llegará como notificación");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String title;
+                String body;
+                try {
+                    body = AiClient.ask(prov, key, model, text);
+                    title = "Respuesta de " + name;
+                } catch (Exception e) {
+                    title = "No se pudo enviar a " + name;
+                    body = String.valueOf(e.getMessage());
+                }
+                final String t = title;
+                final String b = body;
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        showReply(app, notifId, t, b);
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private static void showReply(Context app, int id, String title, String body) {
+        boolean canNotify = Build.VERSION.SDK_INT < 33
+                || app.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED;
+        if (!canNotify) {
+            String shown = body.length() > 400 ? body.substring(0, 400) + "…" : body;
+            Toast.makeText(app, title + ":\n" + shown, Toast.LENGTH_LONG).show();
+            return;
+        }
+        NotificationManager nm = (NotificationManager) app.getSystemService(NOTIFICATION_SERVICE);
+        NotificationChannel ch = new NotificationChannel(
+                "respuestas", "Respuestas de IA", NotificationManager.IMPORTANCE_HIGH);
+        nm.createNotificationChannel(ch);
+        Notification n = new Notification.Builder(app, "respuestas")
+                .setSmallIcon(R.drawable.ic_bolt)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(new Notification.BigTextStyle().bigText(body))
+                .setAutoCancel(true)
+                .build();
+        nm.notify(id, n);
     }
 
     // ---------- Linterna ----------

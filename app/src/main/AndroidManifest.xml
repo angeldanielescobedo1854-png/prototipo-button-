@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.SEND_SMS" />
     <!-- Enviar mensajes por Telegram (bot) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Mostrar la respuesta de la IA como notificación -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="false" />
@@ -15,9 +17,6 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-        <package android:name="com.whatsapp" />
-        <package android:name="com.whatsapp.w4b" />
-        <package android:name="org.telegram.messenger" />
     </queries>
 
     <application
