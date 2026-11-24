@@ -1,12 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Para poder listar las apps instaladas (sin permiso especial) -->
+    <!-- Enviar SMS desde el botón sin abrir ninguna app -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Enviar mensajes por Telegram (bot) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
+    <!-- Para poder listar las apps instaladas y sacar sus iconos (sin permiso especial) -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="org.telegram.messenger" />
     </queries>
 
     <application
@@ -17,6 +28,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

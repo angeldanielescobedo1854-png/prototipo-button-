@@ -1,11 +1,14 @@
 package app.botonesrapidos;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.StatusBarManager;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.Icon;
@@ -19,6 +22,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -26,6 +30,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -37,14 +42,24 @@ public class MainActivity extends Activity {
             Tile1.class, Tile2.class, Tile3.class, Tile4.class, Tile5.class
     };
 
+    private static final int REQ_PHOTO = 100;
+    private static final int REQ_SMS = 200;
+
     private final List<String> appLabels = new ArrayList<>();
     private final List<String> appPkgs = new ArrayList<>();
 
     private final EditText[] nameEt = new EditText[Cfg.SLOTS];
+    private final Spinner[] iconSrcSp = new Spinner[Cfg.SLOTS];
     private final Spinner[] iconSp = new Spinner[Cfg.SLOTS];
+    private final LinearLayout[] photoRow = new LinearLayout[Cfg.SLOTS];
+    private final TextView[] photoInfo = new TextView[Cfg.SLOTS];
+    private final CheckBox[] monoCb = new CheckBox[Cfg.SLOTS];
     private final Spinner[] actionSp = new Spinner[Cfg.SLOTS];
+    private final TextView[] noteTv = new TextView[Cfg.SLOTS];
     private final Spinner[] appSp = new Spinner[Cfg.SLOTS];
     private final EditText[] valueEt = new EditText[Cfg.SLOTS];
+    private final EditText[] extraEt = new EditText[Cfg.SLOTS];
+    private final EditText[] msgEt = new EditText[Cfg.SLOTS];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,8 +72,7 @@ public class MainActivity extends Activity {
         root.setPadding(dp(16), dp(40), dp(16), dp(32));
         scroll.addView(root);
 
-        TextView title = text("Botones Rápidos", 26, true);
-        root.addView(title);
+        root.addView(text("Botones Rápidos", 26, true));
 
         TextView help = text(
                 "Configura hasta 5 botones y guárdalos. Luego abre el Centro de Control, "
@@ -96,13 +110,54 @@ public class MainActivity extends Activity {
         nameEt[s].setText(Cfg.label(this, s));
         card.addView(nameEt[s]);
 
+        // ----- Icono -----
         card.addView(small("Icono"));
+        iconSrcSp[s] = new Spinner(this);
+        iconSrcSp[s].setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item, Cfg.ICON_SOURCES));
+        int iconMode = Cfg.iconMode(this, s);
+        iconSrcSp[s].setSelection(iconMode);
+        card.addView(iconSrcSp[s]);
+
         iconSp[s] = new Spinner(this);
         iconSp[s].setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_dropdown_item, Cfg.ICON_NAMES));
         iconSp[s].setSelection(Cfg.iconIndex(this, s));
         card.addView(iconSp[s]);
 
+        photoRow[s] = new LinearLayout(this);
+        photoRow[s].setOrientation(LinearLayout.HORIZONTAL);
+        Button pick = new Button(this);
+        pick.setText("Elegir foto");
+        pick.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pickPhoto(s);
+            }
+        });
+        photoRow[s].addView(pick);
+        photoInfo[s] = small(Cfg.photoFile(this, s).exists() ? "  Foto guardada ✔" : "  Sin foto");
+        photoRow[s].addView(photoInfo[s]);
+        card.addView(photoRow[s]);
+
+        monoCb[s] = new CheckBox(this);
+        monoCb[s].setText("Icono de un solo color (se ve mejor en el panel)");
+        monoCb[s].setChecked(Cfg.mono(this, s));
+        card.addView(monoCb[s]);
+
+        updateIconUi(s, iconMode);
+        iconSrcSp[s].setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateIconUi(s, position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        // ----- Acción -----
         card.addView(small("Al tocarlo…"));
         actionSp[s] = new Spinner(this);
         actionSp[s].setAdapter(new ArrayAdapter<>(this,
@@ -110,6 +165,9 @@ public class MainActivity extends Activity {
         int action = Cfg.action(this, s);
         actionSp[s].setSelection(action);
         card.addView(actionSp[s]);
+
+        noteTv[s] = small("");
+        card.addView(noteTv[s]);
 
         appSp[s] = new Spinner(this);
         appSp[s].setAdapter(new ArrayAdapter<>(this,
@@ -123,6 +181,18 @@ public class MainActivity extends Activity {
         if (action != Cfg.A_APP) valueEt[s].setText(Cfg.value(this, s));
         card.addView(valueEt[s]);
 
+        extraEt[s] = new EditText(this);
+        extraEt[s].setSingleLine(true);
+        extraEt[s].setText(Cfg.extra(this, s));
+        card.addView(extraEt[s]);
+
+        msgEt[s] = new EditText(this);
+        msgEt[s].setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        msgEt[s].setMinLines(2);
+        msgEt[s].setText(Cfg.msg(this, s));
+        card.addView(msgEt[s]);
+
         updateValueUi(s, action);
         actionSp[s].setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -135,6 +205,7 @@ public class MainActivity extends Activity {
             }
         });
 
+        // ----- Botones -----
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setPadding(0, dp(8), 0, 0);
@@ -163,10 +234,24 @@ public class MainActivity extends Activity {
         return card;
     }
 
+    private void updateIconUi(int s, int mode) {
+        iconSp[s].setVisibility(mode == Cfg.I_LIST ? View.VISIBLE : View.GONE);
+        photoRow[s].setVisibility(mode == Cfg.I_PHOTO ? View.VISIBLE : View.GONE);
+        monoCb[s].setVisibility(mode == Cfg.I_LIST ? View.GONE : View.VISIBLE);
+    }
+
     private void updateValueUi(int s, int action) {
         appSp[s].setVisibility(action == Cfg.A_APP ? View.VISIBLE : View.GONE);
-        boolean needsText = action == Cfg.A_URL || action == Cfg.A_DIAL || action == Cfg.A_WHATSAPP;
-        valueEt[s].setVisibility(needsText ? View.VISIBLE : View.GONE);
+
+        boolean needsValue = action == Cfg.A_URL || action == Cfg.A_DIAL
+                || action == Cfg.A_WHATSAPP || action == Cfg.A_SMS || action == Cfg.A_TELEGRAM;
+        valueEt[s].setVisibility(needsValue ? View.VISIBLE : View.GONE);
+        extraEt[s].setVisibility(action == Cfg.A_TELEGRAM ? View.VISIBLE : View.GONE);
+        boolean needsMsg = action == Cfg.A_WHATSAPP || action == Cfg.A_SMS
+                || action == Cfg.A_TELEGRAM;
+        msgEt[s].setVisibility(needsMsg ? View.VISIBLE : View.GONE);
+
+        String note = "";
         switch (action) {
             case Cfg.A_URL:
                 valueEt[s].setHint("Ej: https://misitio.com");
@@ -179,11 +264,68 @@ public class MainActivity extends Activity {
             case Cfg.A_WHATSAPP:
                 valueEt[s].setHint("Número con lada, ej: 528661352460");
                 valueEt[s].setInputType(InputType.TYPE_CLASS_PHONE);
+                msgEt[s].setHint("Mensaje ya escrito (opcional)");
+                note = "WhatsApp no permite enviar mensajes sin abrir la app. Este botón abre "
+                        + "el chat con el mensaje listo y solo tienes que tocar Enviar.";
+                break;
+            case Cfg.A_SMS:
+                valueEt[s].setHint("Número, ej: 8661352460");
+                valueEt[s].setInputType(InputType.TYPE_CLASS_PHONE);
+                msgEt[s].setHint("Mensaje que se enviará");
+                note = "Se envía al tocar el botón, sin abrir nada. Puede tener costo según tu "
+                        + "plan y pedirá permiso de SMS al guardar.";
+                break;
+            case Cfg.A_TELEGRAM:
+                valueEt[s].setHint("ID del chat, ej: 123456789");
+                valueEt[s].setInputType(InputType.TYPE_CLASS_TEXT);
+                extraEt[s].setHint("Token del bot (de @BotFather)");
+                msgEt[s].setHint("Mensaje que se enviará");
+                note = "Usa un bot tuyo de Telegram. El bot solo puede escribirle a quien le "
+                        + "haya dado /start o a grupos donde esté, no a cualquier contacto.";
                 break;
             default:
                 break;
         }
+        noteTv[s].setText(note);
+        noteTv[s].setVisibility(note.isEmpty() ? View.GONE : View.VISIBLE);
     }
+
+    // ---------- Foto de la galería ----------
+
+    private void pickPhoto(int s) {
+        Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+        i.setType("image/*");
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(Intent.createChooser(i, "Elegir foto"), REQ_PHOTO + s);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        int s = requestCode - REQ_PHOTO;
+        if (s < 0 || s >= Cfg.SLOTS) return;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        try {
+            Bitmap square = IconUtil.squareFromUri(this, data.getData());
+            IconUtil.savePng(Cfg.photoFile(this, s), square);
+            photoInfo[s].setText("  Foto lista ✔");
+        } catch (Exception e) {
+            toast("No se pudo leer esa foto");
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_SMS) {
+            boolean ok = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            toast(ok ? "Permiso de SMS concedido ✔"
+                    : "Sin permiso de SMS el botón no podrá enviar. Si no te deja activarlo: "
+                    + "Ajustes > Apps > Botones Rápidos > ⋮ > Permitir ajustes restringidos.");
+        }
+    }
+
+    // ---------- Guardar ----------
 
     /** Guarda el botón s. Devuelve false si falta algún dato. */
     private boolean save(int s) {
@@ -192,6 +334,9 @@ public class MainActivity extends Activity {
         if (name.isEmpty()) name = "Botón " + (s + 1);
 
         String value = "";
+        String extra = extraEt[s].getText().toString().trim();
+        String msg = msgEt[s].getText().toString().trim();
+
         if (action == Cfg.A_APP) {
             int i = appSp[s].getSelectedItemPosition();
             if (i >= 0 && i < appPkgs.size()) value = appPkgs.get(i);
@@ -205,9 +350,57 @@ public class MainActivity extends Activity {
                 toast("Falta escribir el dato del botón");
                 return false;
             }
+            if ((action == Cfg.A_SMS || action == Cfg.A_TELEGRAM) && msg.isEmpty()) {
+                toast("Escribe el mensaje que se enviará");
+                return false;
+            }
+            if (action == Cfg.A_TELEGRAM && extra.isEmpty()) {
+                toast("Falta el token del bot");
+                return false;
+            }
         }
 
-        Cfg.save(this, s, name, iconSp[s].getSelectedItemPosition(), action, value);
+        // Icono personalizado
+        int iconMode = iconSrcSp[s].getSelectedItemPosition();
+        boolean mono = monoCb[s].isChecked();
+        if (iconMode != Cfg.I_LIST) {
+            Bitmap bmp = null;
+            if (iconMode == Cfg.I_APP) {
+                String[] pkgs = Cfg.iconPackages(action, value);
+                if (pkgs.length == 0) {
+                    toast("Este tipo de botón no tiene icono de app. Elige otra opción de icono.");
+                    return false;
+                }
+                bmp = IconUtil.appIcon(this, pkgs);
+                if (bmp == null) {
+                    toast("No encontré esa app instalada en el teléfono");
+                    return false;
+                }
+            } else {
+                File f = Cfg.photoFile(this, s);
+                if (f.exists()) bmp = BitmapFactory.decodeFile(f.getPath());
+                if (bmp == null) {
+                    toast("Elige una foto primero");
+                    return false;
+                }
+            }
+            try {
+                if (mono) bmp = IconUtil.toMono(bmp);
+                IconUtil.savePng(Cfg.iconFile(this, s), bmp);
+            } catch (Exception e) {
+                toast("No se pudo guardar el icono");
+                return false;
+            }
+        }
+
+        Cfg.save(this, s, name, iconSp[s].getSelectedItemPosition(), iconMode, mono,
+                action, value, extra, msg);
+
+        if (action == Cfg.A_SMS && checkSelfPermission(Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.SEND_SMS}, REQ_SMS);
+        }
+
         TileService.requestListeningState(this, new ComponentName(this, TILES[s]));
         return true;
     }
@@ -217,7 +410,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33) {
             try {
                 Api33.add(this, new ComponentName(this, TILES[s]),
-                        Cfg.label(this, s), Cfg.iconRes(this, s));
+                        Cfg.label(this, s), Cfg.tileIcon(this, s));
                 return;
             } catch (Exception ignored) {
                 // cae al método manual
@@ -228,9 +421,9 @@ public class MainActivity extends Activity {
 
     /** Pedir al sistema que agregue el botón (Android 13+). */
     private static final class Api33 {
-        static void add(final Activity a, ComponentName cn, String label, int iconRes) {
+        static void add(final Activity a, ComponentName cn, String label, Icon icon) {
             StatusBarManager sbm = a.getSystemService(StatusBarManager.class);
-            sbm.requestAddTileService(cn, label, Icon.createWithResource(a, iconRes),
+            sbm.requestAddTileService(cn, label, icon,
                     a.getMainExecutor(), new java.util.function.Consumer<Integer>() {
                         @Override
                         public void accept(Integer r) {
@@ -284,7 +477,7 @@ public class MainActivity extends Activity {
     }
 
     private void toast(String m) {
-        Toast.makeText(this, m, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, m, Toast.LENGTH_LONG).show();
     }
 
     private int dp(int v) {

@@ -1,15 +1,26 @@
 package app.botonesrapidos;
 
+import android.Manifest;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
-import android.graphics.drawable.Icon;
+import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
+import android.telephony.SmsManager;
 import android.widget.Toast;
+
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.ArrayList;
 
 /** Lógica común de los 5 botones del Centro de Control. */
 public abstract class SlotTileService extends TileService {
@@ -59,22 +70,37 @@ public abstract class SlotTileService extends TileService {
         Tile t = getQsTile();
         if (t == null) return;
         t.setLabel(Cfg.label(this, slot()));
-        t.setIcon(Icon.createWithResource(this, Cfg.iconRes(this, slot())));
+        t.setIcon(Cfg.tileIcon(this, slot()));
         t.setState(isTorch() && torchOn ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         t.updateTile();
     }
 
     private void doAction() {
-        if (isTorch()) {
-            toggleTorch();
-            return;
+        switch (Cfg.action(this, slot())) {
+            case Cfg.A_TORCH:
+                toggleTorch();
+                return;
+            case Cfg.A_SMS:
+                sendSms();
+                return;
+            case Cfg.A_TELEGRAM:
+                sendTelegram();
+                return;
+            default:
+                break;
         }
         Intent i = Cfg.buildIntent(this, slot());
         if (i == null) {
-            // Aún sin configurar: abre la app para configurarlo.
-            i = new Intent(this, MainActivity.class);
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            openConfig();
+            return;
         }
+        launch(i);
+    }
+
+    /** Aún sin configurar: abre la app para configurarlo. */
+    private void openConfig() {
+        Intent i = new Intent(this, MainActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         launch(i);
     }
 
@@ -87,6 +113,85 @@ public abstract class SlotTileService extends TileService {
         } else {
             startActivityAndCollapse(i);
         }
+    }
+
+    private void toast(String m) {
+        Toast.makeText(getApplicationContext(), m, Toast.LENGTH_LONG).show();
+    }
+
+    // ---------- Enviar SMS sin abrir nada ----------
+
+    @SuppressWarnings("deprecation")
+    private void sendSms() {
+        String number = Cfg.value(this, slot()).trim();
+        String text = Cfg.msg(this, slot()).trim();
+        if (number.isEmpty() || text.isEmpty()) {
+            openConfig();
+            return;
+        }
+        if (checkSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            toast("Falta el permiso de SMS. Abre la app y toca Guardar en este botón.");
+            openConfig();
+            return;
+        }
+        try {
+            SmsManager sm = Build.VERSION.SDK_INT >= 31
+                    ? getSystemService(SmsManager.class)
+                    : SmsManager.getDefault();
+            ArrayList<String> parts = sm.divideMessage(text);
+            sm.sendMultipartTextMessage(number, null, parts, null, null);
+            toast("SMS enviado a " + number);
+        } catch (Exception e) {
+            toast("No se pudo enviar el SMS");
+        }
+    }
+
+    // ---------- Enviar mensaje por Telegram (bot) ----------
+
+    private void sendTelegram() {
+        final String chat = Cfg.value(this, slot()).trim();
+        final String token = Cfg.extra(this, slot()).trim();
+        final String text = Cfg.msg(this, slot()).trim();
+        if (chat.isEmpty() || token.isEmpty() || text.isEmpty()) {
+            openConfig();
+            return;
+        }
+        final Context app = getApplicationContext();
+        final Handler main = new Handler(Looper.getMainLooper());
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                boolean ok = false;
+                HttpURLConnection c = null;
+                try {
+                    URL u = new URL("https://api.telegram.org/bot" + token + "/sendMessage");
+                    c = (HttpURLConnection) u.openConnection();
+                    c.setRequestMethod("POST");
+                    c.setDoOutput(true);
+                    c.setConnectTimeout(8000);
+                    c.setReadTimeout(8000);
+                    String body = "chat_id=" + URLEncoder.encode(chat, "UTF-8")
+                            + "&text=" + URLEncoder.encode(text, "UTF-8");
+                    OutputStream os = c.getOutputStream();
+                    os.write(body.getBytes("UTF-8"));
+                    os.close();
+                    ok = c.getResponseCode() == 200;
+                } catch (Exception ignored) {
+                } finally {
+                    if (c != null) c.disconnect();
+                }
+                final boolean result = ok;
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(app, result
+                                        ? "Mensaje enviado por Telegram"
+                                        : "No se pudo enviar. Revisa el token, el chat y tu internet.",
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+            }
+        }).start();
     }
 
     // ---------- Linterna ----------
@@ -116,13 +221,13 @@ public abstract class SlotTileService extends TileService {
     private void toggleTorch() {
         String id = torchId();
         if (id == null) {
-            Toast.makeText(this, "Este teléfono no tiene flash", Toast.LENGTH_SHORT).show();
+            toast("Este teléfono no tiene flash");
             return;
         }
         try {
             cam().setTorchMode(id, !torchOn);
         } catch (CameraAccessException e) {
-            Toast.makeText(this, "No se pudo usar la linterna", Toast.LENGTH_SHORT).show();
+            toast("No se pudo usar la linterna");
         }
     }
 
