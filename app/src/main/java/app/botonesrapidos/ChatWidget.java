@@ -3,14 +3,27 @@ package app.botonesrapidos;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
+import android.util.TypedValue;
 import android.widget.RemoteViews;
 
 /** Widget con barra de mensaje, recuadro del chat y toque para abrir la app. */
 public class ChatWidget extends AppWidgetProvider {
+
+    private static final int[] WIDGET_BG = {
+            R.drawable.widget_bg_0, R.drawable.widget_bg_1, R.drawable.widget_bg_2, R.drawable.widget_bg_3};
+    private static final int[] BOX_BG = {
+            R.drawable.box_bg_0, R.drawable.box_bg_1, R.drawable.box_bg_2, R.drawable.box_bg_3};
+    private static final int[] BAR_BG = {
+            R.drawable.bar_bg_0, R.drawable.bar_bg_1, R.drawable.bar_bg_2, R.drawable.bar_bg_3};
+    private static final int[] BTN_BG = {
+            R.drawable.btn_bg_0, R.drawable.btn_bg_1, R.drawable.btn_bg_2, R.drawable.btn_bg_3};
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
@@ -28,6 +41,15 @@ public class ChatWidget extends AppWidgetProvider {
 
     static void update(Context c, int id) {
         AppWidgetManager.getInstance(c).updateAppWidget(id, build(c, id));
+    }
+
+    /** Vuelve a dibujar todos los widgets (por ejemplo, tras cambiar el estilo). */
+    static void updateAll(Context c) {
+        AppWidgetManager m = AppWidgetManager.getInstance(c);
+        int[] ids = m.getAppWidgetIds(new ComponentName(c, ChatWidget.class));
+        for (int id : ids) {
+            m.updateAppWidget(id, build(c, id));
+        }
     }
 
     private static PendingIntent activity(Context c, int req, Intent i) {
@@ -53,9 +75,27 @@ public class ChatWidget extends AppWidgetProvider {
         return i;
     }
 
+    /** Widget real de la pantalla de inicio. */
     static RemoteViews build(Context c, int id) {
+        RemoteViews v = render(c, id, WidgetCfg.get(c, id));
+        applyStyle(v, WidgetStyle.load(c));
+        return v;
+    }
+
+    /** Vista previa con datos de ejemplo, para mostrar dentro de la app. */
+    static RemoteViews preview(Context c) {
+        Dest d = new Dest();
+        d.kind = Dest.K_OTHER;
+        d.app = "Tu IA o chat";
+        d.label = "Ideas de la página";
+        RemoteViews v = render(c, 0, d);
+        v.setTextViewText(R.id.w_box, "💬 Ideas de la página\nTú: ¿Me ayudas con un logo?");
+        applyStyle(v, WidgetStyle.load(c));
+        return v;
+    }
+
+    private static RemoteViews render(Context c, int id, Dest d) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_chat);
-        Dest d = WidgetCfg.get(c, id);
 
         if (d == null) {
             v.setImageViewResource(R.id.w_icon, R.drawable.ic_chat);
@@ -99,5 +139,43 @@ public class ChatWidget extends AppWidgetProvider {
         v.setOnClickPendingIntent(R.id.w_clock,
                 activity(c, id * 4 + 2, composeIntent(c, id, "schedule")));
         return v;
+    }
+
+    // ---------- estilo ----------
+
+    private static void tint(RemoteViews v, int viewId, int color) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            v.setColorStateList(viewId, "setBackgroundTintList", ColorStateList.valueOf(color));
+        } else {
+            // En Androids viejos solo se puede cambiar el color (sin esquinas redondeadas).
+            v.setInt(viewId, "setBackgroundColor", color);
+        }
+    }
+
+    static void applyStyle(RemoteViews v, WidgetStyle s) {
+        int k = Math.max(0, Math.min(3, s.corners));
+        v.setInt(R.id.w_root, "setBackgroundResource", WIDGET_BG[k]);
+        v.setInt(R.id.w_box, "setBackgroundResource", BOX_BG[k]);
+        v.setInt(R.id.w_bar, "setBackgroundResource", BAR_BG[k]);
+        v.setInt(R.id.w_clock, "setBackgroundResource", BTN_BG[k]);
+        v.setInt(R.id.w_send, "setBackgroundResource", BTN_BG[k]);
+
+        tint(v, R.id.w_root, s.bg);
+        tint(v, R.id.w_box, s.box);
+        tint(v, R.id.w_bar, s.bar);
+        tint(v, R.id.w_clock, s.button);
+        tint(v, R.id.w_send, s.button);
+
+        v.setTextColor(R.id.w_title, s.text);
+        v.setTextColor(R.id.w_sub, s.subtext);
+        v.setTextColor(R.id.w_box, s.text);
+        v.setTextColor(R.id.w_bar, s.hint);
+        v.setInt(R.id.w_clock, "setColorFilter", s.icon);
+        v.setInt(R.id.w_send, "setColorFilter", s.icon);
+
+        v.setTextViewTextSize(R.id.w_title, TypedValue.COMPLEX_UNIT_SP, 15f * s.textScale);
+        v.setTextViewTextSize(R.id.w_sub, TypedValue.COMPLEX_UNIT_SP, 11f * s.textScale);
+        v.setTextViewTextSize(R.id.w_box, TypedValue.COMPLEX_UNIT_SP, 12f * s.textScale);
+        v.setTextViewTextSize(R.id.w_bar, TypedValue.COMPLEX_UNIT_SP, 13f * s.textScale);
     }
 }

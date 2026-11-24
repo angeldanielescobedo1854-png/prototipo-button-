@@ -3,7 +3,7 @@
     android:id="@+id/w_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg"
+    android:background="@drawable/widget_bg_2"
     android:orientation="vertical"
     android:padding="12dp">
 
@@ -54,7 +54,7 @@
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
         android:layout_weight="1"
-        android:background="@drawable/box_bg"
+        android:background="@drawable/box_bg_2"
         android:ellipsize="end"
         android:maxLines="4"
         android:padding="10dp"
@@ -72,7 +72,7 @@
             android:layout_width="0dp"
             android:layout_height="40dp"
             android:layout_weight="1"
-            android:background="@drawable/bar_bg"
+            android:background="@drawable/bar_bg_2"
             android:gravity="center_vertical"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
@@ -85,7 +85,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
-            android:background="@drawable/circle_bg"
+            android:background="@drawable/btn_bg_2"
             android:contentDescription="Programar"
             android:padding="9dp"
             android:src="@drawable/ic_clock" />
@@ -95,7 +95,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
-            android:background="@drawable/circle_bg"
+            android:background="@drawable/btn_bg_2"
             android:contentDescription="Enviar"
             android:padding="9dp"
             android:src="@drawable/ic_send" />
