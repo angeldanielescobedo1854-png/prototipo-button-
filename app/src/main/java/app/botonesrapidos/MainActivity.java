@@ -75,12 +75,7 @@ public class MainActivity extends Activity {
 
     // Estilo de widgets con IA
     private FrameLayout previewFrame;
-    private EditText aiPrompt;
-    private Spinner aiProvSp;
-    private EditText aiKeyEt;
-    private EditText aiModelEt;
-    private TextView aiStatus;
-    private Button aiApplyBtn;
+    private TextView styleStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -557,7 +552,58 @@ public class MainActivity extends Activity {
     }
 
 
-    // ---------- Estilo de los widgets con IA ----------
+    // ---------- Estilo de los widgets ----------
+
+    /** Temas listos: bg, box, bar, button, text, subtext, hint, icon. */
+    private static final String[] THEME_NAMES = {"Oscuro", "Claro", "Azul", "Verde", "Rosa"};
+    private static final int[][] THEMES = {
+            {0xF21C2030, 0xFF2A3045, 0xFF3A4058, 0xFF3A4058, 0xFFFFFFFF, 0xFFB8C0D4, 0xFFAEB6CC, 0xFFFFFFFF},
+            {0xF2F4F6FB, 0xFFE3E8F4, 0xFFFFFFFF, 0xFFD5DCEE, 0xFF1B1F2A, 0xFF5B6475, 0xFF7A8499, 0xFF1B1F2A},
+            {0xF20D2B5E, 0xFF1A4486, 0xFF2D5CA8, 0xFF2D5CA8, 0xFFFFFFFF, 0xFFC4D6F5, 0xFFB5C8EA, 0xFFFFFFFF},
+            {0xF20F3D2E, 0xFF1B5E47, 0xFF2A7A5E, 0xFF2A7A5E, 0xFFFFFFFF, 0xFFBFE6D6, 0xFFB0DCCB, 0xFFFFFFFF},
+            {0xF2FCE4EE, 0xFFF6C6D9, 0xFFFFFFFF, 0xFFEFA9C6, 0xFF3A1226, 0xFF7A4A62, 0xFF9A6A82, 0xFF3A1226}
+    };
+
+    private void applyTheme(int i) {
+        WidgetStyle cur = WidgetStyle.load(this);
+        WidgetStyle.savePrevious(this, cur);
+        WidgetStyle n = new WidgetStyle();
+        int[] t = THEMES[i];
+        n.bg = t[0];
+        n.box = t[1];
+        n.bar = t[2];
+        n.button = t[3];
+        n.text = t[4];
+        n.subtext = t[5];
+        n.hint = t[6];
+        n.icon = t[7];
+        n.corners = cur.corners;
+        n.textScale = cur.textScale;
+        WidgetStyle.save(this, n);
+        ChatWidget.updateAll(this);
+        refreshPreview();
+        styleStatus.setText("Tema " + THEME_NAMES[i] + " aplicado");
+    }
+
+    private void changeLook(int cornersDelta, float scaleDelta) {
+        WidgetStyle cur = WidgetStyle.load(this);
+        WidgetStyle.savePrevious(this, cur);
+        WidgetStyle n = WidgetStyle.load(this);
+        n.corners = Math.max(0, Math.min(3, cur.corners + cornersDelta));
+        n.textScale = Math.max(0.8f, Math.min(1.4f, cur.textScale + scaleDelta));
+        WidgetStyle.save(this, n);
+        ChatWidget.updateAll(this);
+        refreshPreview();
+        styleStatus.setText("Esquinas: " + n.corners + "/3 · Letra: " + Math.round(n.textScale * 100) + "%");
+    }
+
+    private Button smallButton(String label, View.OnClickListener l) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setAllCaps(false);
+        b.setOnClickListener(l);
+        return b;
+    }
 
     private View buildStyleCard() {
         LinearLayout card = new LinearLayout(this);
@@ -572,10 +618,8 @@ public class MainActivity extends Activity {
         lp.topMargin = dp(12);
         card.setLayoutParams(lp);
 
-        card.addView(text("Estilo de los widgets con IA", 17, true));
-        card.addView(small("Escribe cómo quieres que se vean tus widgets y la IA ajusta colores, "
-                + "esquinas y tamaño de letra. Solo cambia el estilo, no el funcionamiento. "
-                + "Se aplica a todos tus widgets de chat."));
+        card.addView(text("Estilo de los widgets", 17, true));
+        card.addView(small("Elige un tema y ajusta esquinas y letra. Se aplica a todos tus widgets de chat."));
 
         previewFrame = new FrameLayout(this);
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
@@ -583,85 +627,86 @@ public class MainActivity extends Activity {
         plp.topMargin = dp(10);
         card.addView(previewFrame, plp);
 
-        SharedPreferences ai = getSharedPreferences("ai", Context.MODE_PRIVATE);
+        card.addView(small("Temas"));
+        LinearLayout themeRow = new LinearLayout(this);
+        themeRow.setOrientation(LinearLayout.HORIZONTAL);
+        for (int i = 0; i < THEME_NAMES.length; i++) {
+            final int idx = i;
+            Button b = smallButton(THEME_NAMES[i], new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    applyTheme(idx);
+                }
+            });
+            b.setTextSize(11);
+            b.setPadding(dp(2), 0, dp(2), 0);
+            b.setMinWidth(0);
+            b.setMinimumWidth(0);
+            themeRow.addView(b, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        }
+        card.addView(themeRow);
 
-        aiPrompt = new EditText(this);
-        aiPrompt.setHint("Ej: azul marino, esquinas muy redondeadas y letra más grande");
-        aiPrompt.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE
-                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        aiPrompt.setMinLines(2);
-        card.addView(aiPrompt);
-
-        card.addView(small("IA que hará el cambio"));
-        aiProvSp = new Spinner(this);
-        aiProvSp.setAdapter(new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, AiClient.NAMES));
-        aiProvSp.setSelection(Math.max(0, Math.min(AiClient.NAMES.length - 1, ai.getInt("prov", 0))));
-        card.addView(aiProvSp);
-
-        aiKeyEt = new EditText(this);
-        aiKeyEt.setHint("Tu clave de API de esa IA");
-        aiKeyEt.setSingleLine(true);
-        aiKeyEt.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        aiKeyEt.setText(ai.getString("key", ""));
-        card.addView(aiKeyEt);
-
-        aiModelEt = new EditText(this);
-        aiModelEt.setHint("Modelo (vacío = el de por defecto)");
-        aiModelEt.setSingleLine(true);
-        aiModelEt.setText(ai.getString("model", ""));
-        card.addView(aiModelEt);
-
-        card.addView(small("Necesitas tu propia clave de API (se cobra aparte de la suscripción de "
-                + "la app de la IA). Solo se envía tu instrucción y los colores actuales del widget: "
-                + "nunca tus chats ni contactos. La clave se guarda solo en este teléfono."));
-
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, dp(8), 0, 0);
-
-        aiApplyBtn = new Button(this);
-        aiApplyBtn.setText("Aplicar con IA");
-        aiApplyBtn.setOnClickListener(new View.OnClickListener() {
+        card.addView(small("Esquinas y letra"));
+        LinearLayout row1 = new LinearLayout(this);
+        row1.setOrientation(LinearLayout.HORIZONTAL);
+        row1.addView(smallButton("Esquinas −", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                applyAi();
+                changeLook(-1, 0f);
             }
-        });
-        row.addView(aiApplyBtn);
+        }), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row1.addView(smallButton("Esquinas +", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                changeLook(1, 0f);
+            }
+        }), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        card.addView(row1);
 
-        Button undo = new Button(this);
-        undo.setText("Deshacer");
-        undo.setOnClickListener(new View.OnClickListener() {
+        LinearLayout row2 = new LinearLayout(this);
+        row2.setOrientation(LinearLayout.HORIZONTAL);
+        row2.addView(smallButton("Letra −", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                changeLook(0, -0.1f);
+            }
+        }), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row2.addView(smallButton("Letra +", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                changeLook(0, 0.1f);
+            }
+        }), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        card.addView(row2);
+
+        LinearLayout row3 = new LinearLayout(this);
+        row3.setOrientation(LinearLayout.HORIZONTAL);
+        row3.addView(smallButton("Deshacer", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (WidgetStyle.undo(MainActivity.this)) {
                     ChatWidget.updateAll(MainActivity.this);
                     refreshPreview();
-                    aiStatus.setText("Volví al estilo anterior");
+                    styleStatus.setText("Volví al estilo anterior");
                 } else {
                     toast("No hay cambios que deshacer");
                 }
             }
-        });
-        row.addView(undo);
-
-        Button reset = new Button(this);
-        reset.setText("Restablecer");
-        reset.setOnClickListener(new View.OnClickListener() {
+        }), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row3.addView(smallButton("Restablecer", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 WidgetStyle.reset(MainActivity.this);
                 ChatWidget.updateAll(MainActivity.this);
                 refreshPreview();
-                aiStatus.setText("Estilo original restablecido (puedes deshacer)");
+                styleStatus.setText("Estilo original restablecido (puedes deshacer)");
             }
-        });
-        row.addView(reset);
-        card.addView(row);
+        }), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        card.addView(row3);
 
-        aiStatus = small("");
-        card.addView(aiStatus);
+        styleStatus = small("");
+        card.addView(styleStatus);
         return card;
     }
 
@@ -674,82 +719,6 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             previewFrame.addView(small("No se pudo mostrar la vista previa"));
         }
-    }
-
-    private static String buildStylePrompt(String ask, WidgetStyle cur) {
-        return "Eres el diseñador de un widget de chat para Android. Cambia su estilo según la "
-                + "petición del usuario.\n"
-                + "Responde SOLO con un objeto JSON, sin texto antes ni después y sin bloques de código.\n"
-                + "Claves (todas opcionales; incluye solo las que cambien):\n"
-                + "- bg: fondo del widget\n"
-                + "- box: recuadro del chat\n"
-                + "- bar: barra de mensaje\n"
-                + "- button: botones redondos (reloj y enviar)\n"
-                + "- text: texto principal\n"
-                + "- subtext: texto secundario\n"
-                + "- hint: texto de la barra de mensaje\n"
-                + "- icon: color de los iconos de los botones\n"
-                + "  Los colores van como \"#RRGGBB\" o \"#AARRGGBB\" (AA es la opacidad: FF opaco, 80 semitransparente).\n"
-                + "- corners: entero 0 cuadrado, 1 suave, 2 redondeado, 3 muy redondeado\n"
-                + "- textScale: número entre 0.8 y 1.4\n"
-                + "- note: una frase corta en español que diga qué cambiaste\n"
-                + "Cuida que el texto se lea bien sobre su fondo.\n"
-                + "Estilo actual: " + cur.toJson() + "\n"
-                + "Petición del usuario: " + ask;
-    }
-
-    private void applyAi() {
-        final String ask = aiPrompt.getText().toString().trim();
-        final String key = aiKeyEt.getText().toString().trim();
-        final int prov = Math.max(0, aiProvSp.getSelectedItemPosition());
-        final String typedModel = aiModelEt.getText().toString().trim();
-        final String model = typedModel.isEmpty() ? AiClient.DEFAULT_MODELS[prov] : typedModel;
-        if (ask.isEmpty()) {
-            toast("Escribe cómo quieres que se vean los widgets");
-            return;
-        }
-        if (key.isEmpty()) {
-            toast("Falta tu clave de API");
-            return;
-        }
-        getSharedPreferences("ai", Context.MODE_PRIVATE).edit()
-                .putInt("prov", prov).putString("key", key).putString("model", typedModel).apply();
-
-        aiApplyBtn.setEnabled(false);
-        aiStatus.setText("Pensando…");
-        final WidgetStyle cur = WidgetStyle.load(this);
-        final Context app = getApplicationContext();
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                String status;
-                try {
-                    String resp = AiClient.ask(prov, key, model, buildStylePrompt(ask, cur));
-                    int a = resp.indexOf('{');
-                    int b = resp.lastIndexOf('}');
-                    if (a < 0 || b <= a) throw new Exception("La IA no devolvió un estilo válido");
-                    JSONObject o = new JSONObject(resp.substring(a, b + 1));
-                    WidgetStyle next = cur.merged(o, true);
-                    WidgetStyle.savePrevious(app, cur);
-                    WidgetStyle.save(app, next);
-                    ChatWidget.updateAll(app);
-                    String note = o.optString("note", "");
-                    status = note.isEmpty() ? "Estilo aplicado ✔" : "Listo ✔ " + note;
-                } catch (Exception e) {
-                    status = "No se pudo cambiar el estilo: " + e.getMessage();
-                }
-                final String st = status;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        aiStatus.setText(st);
-                        aiApplyBtn.setEnabled(true);
-                        refreshPreview();
-                    }
-                });
-            }
-        }).start();
     }
 
     // ---------- helpers de UI ----------

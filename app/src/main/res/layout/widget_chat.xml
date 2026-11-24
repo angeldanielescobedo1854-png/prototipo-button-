@@ -4,100 +4,118 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg_2"
-    android:orientation="vertical"
-    android:padding="12dp">
+    android:orientation="horizontal"
+    android:padding="10dp">
 
+    <!-- Zona de escribir: grande, a la izquierda y un poco más abajo -->
+    <TextView
+        android:id="@+id/w_bar"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="2dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="8dp"
+        android:layout_weight="5"
+        android:background="@drawable/bar_bg_2"
+        android:ellipsize="end"
+        android:gravity="top|start"
+        android:padding="14dp"
+        android:text="Escribe un mensaje…"
+        android:textColor="#FFAEB6CC"
+        android:textSize="16sp" />
+
+    <!-- Columna derecha: título, chat y botones, todo en tamaño cómodo -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:id="@+id/w_icon"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:scaleType="fitCenter" />
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="4"
+        android:orientation="vertical">
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/w_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#FFFFFFFF"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+            <ImageView
+                android:id="@+id/w_icon"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:scaleType="fitCenter" />
 
-            <TextView
-                android:id="@+id/w_sub"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#FFB8C0D4"
-                android:textSize="11sp" />
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/w_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/w_sub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#FFB8C0D4"
+                    android:textSize="11sp" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/w_box"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
-        android:layout_weight="1"
-        android:background="@drawable/box_bg_2"
-        android:ellipsize="end"
-        android:maxLines="4"
-        android:padding="10dp"
-        android:textColor="#FFFFFFFF"
-        android:textSize="12sp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/w_bar"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:background="@drawable/bar_bg_2"
+            android:id="@+id/w_box"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="6dp"
+            android:layout_weight="1.4"
+            android:background="@drawable/box_bg_2"
+            android:ellipsize="end"
             android:gravity="center_vertical"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:text="Escribe un mensaje…"
-            android:textColor="#FFAEB6CC"
-            android:textSize="13sp" />
+            android:maxLines="4"
+            android:padding="8dp"
+            android:textColor="#FFFFFFFF"
+            android:textSize="12sp" />
 
-        <ImageButton
-            android:id="@+id/w_clock"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/btn_bg_2"
-            android:contentDescription="Programar"
-            android:padding="9dp"
-            android:src="@drawable/ic_clock" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1.2"
+            android:orientation="horizontal">
 
-        <ImageButton
-            android:id="@+id/w_send"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/btn_bg_2"
-            android:contentDescription="Enviar"
-            android:padding="9dp"
-            android:src="@drawable/ic_send" />
+            <ImageButton
+                android:id="@+id/w_clock"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:background="@drawable/btn_bg_2"
+                android:contentDescription="Programar"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_clock" />
+
+            <ImageButton
+                android:id="@+id/w_send"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:background="@drawable/btn_bg_2"
+                android:contentDescription="Enviar"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_send" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

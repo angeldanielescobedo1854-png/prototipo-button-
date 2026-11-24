@@ -176,6 +176,6 @@ public class ChatWidget extends AppWidgetProvider {
         v.setTextViewTextSize(R.id.w_title, TypedValue.COMPLEX_UNIT_SP, 15f * s.textScale);
         v.setTextViewTextSize(R.id.w_sub, TypedValue.COMPLEX_UNIT_SP, 11f * s.textScale);
         v.setTextViewTextSize(R.id.w_box, TypedValue.COMPLEX_UNIT_SP, 12f * s.textScale);
-        v.setTextViewTextSize(R.id.w_bar, TypedValue.COMPLEX_UNIT_SP, 13f * s.textScale);
+        v.setTextViewTextSize(R.id.w_bar, TypedValue.COMPLEX_UNIT_SP, 16f * s.textScale);
     }
 }
