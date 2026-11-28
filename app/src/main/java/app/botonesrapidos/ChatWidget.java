@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.util.TypedValue;
+import android.view.View;
 import android.widget.RemoteViews;
 
 /** Widget con barra de mensaje, recuadro del chat y toque para abrir la app. */
@@ -137,15 +138,28 @@ public class ChatWidget extends AppWidgetProvider {
 
         Bitmap icon = (brand != 0 || d.pkg.isEmpty()) ? null : IconUtil.appIcon(c, d.pkg);
         if (claude) {
-            v.setImageViewResource(R.id.w_icon, R.drawable.ic_claude_star);
-            v.setInt(R.id.w_send, "setColorFilter", 0xFFF28C5A);
+            v.setViewVisibility(R.id.w_icon, View.GONE);
+            if (sq) v.setViewVisibility(R.id.w_mark, View.GONE);
+            v.setInt(R.id.w_send, "setColorFilter", 0xFFC2552B);
             v.setInt(R.id.w_clock, "setColorFilter", 0xFFFFFFFF);
         } else if (dark) {
-            int logo = brand == 2 ? R.drawable.ic_chatgpt : R.drawable.ic_grok;
-            v.setImageViewResource(R.id.w_icon, logo);
-            v.setImageViewResource(R.id.w_mark, logo);
-            v.setInt(R.id.w_mark, "setColorFilter", 0x2EFFFFFF);
+            v.setViewVisibility(R.id.w_icon, View.GONE);
+            v.setViewVisibility(R.id.w_mark, View.GONE);
             v.setTextViewText(R.id.w_bar, brand == 3 ? "Pregunta a Grok…" : "Escribe un mensaje…");
+            if (brand == 3) {
+                v.setInt(R.id.w_root, "setBackgroundResource", R.drawable.grok_bg);
+            } else {
+                // ChatGPT: gris claro a blanco, con texto oscuro
+                v.setInt(R.id.w_root, "setBackgroundResource", R.drawable.gpt_bg);
+                v.setInt(R.id.w_bar, "setBackgroundResource", R.drawable.gpt_bar);
+                v.setInt(R.id.w_clock, "setBackgroundResource", R.drawable.gpt_btn);
+                v.setInt(R.id.w_send, "setBackgroundResource", R.drawable.gpt_btn);
+                v.setTextColor(R.id.w_title, 0xFF111214);
+                v.setTextColor(R.id.w_sub, 0xFF5A5D66);
+                v.setTextColor(R.id.w_bar, 0xFF6B6E78);
+                v.setInt(R.id.w_clock, "setColorFilter", 0xFF111214);
+                v.setInt(R.id.w_send, "setColorFilter", 0xFF111214);
+            }
         } else if (icon != null) {
             v.setImageViewBitmap(R.id.w_icon, icon);
         } else {
