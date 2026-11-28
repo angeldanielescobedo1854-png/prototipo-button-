@@ -155,6 +155,7 @@ public class ChatWidget extends AppWidgetProvider {
         v.setTextViewText(R.id.w_title, d.appName());
         String to = (d.to.isEmpty() || d.kind == Dest.K_BOT) ? "" : " · " + d.to;
         v.setTextViewText(R.id.w_sub, "Chat: " + d.chatName() + to);
+        if (dark) v.setTextViewText(R.id.w_sub, brand == 3 ? "Chat: xAI" : "Chat: OpenAI");
 
         String last = WidgetCfg.last(c, id);
         String box;
