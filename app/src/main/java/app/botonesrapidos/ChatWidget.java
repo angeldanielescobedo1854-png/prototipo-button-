@@ -3,6 +3,7 @@ package app.botonesrapidos;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
+import android.appwidget.AppWidgetProviderInfo;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -46,10 +47,20 @@ public class ChatWidget extends AppWidgetProvider {
     /** Vuelve a dibujar todos los widgets (por ejemplo, tras cambiar el estilo). */
     static void updateAll(Context c) {
         AppWidgetManager m = AppWidgetManager.getInstance(c);
-        int[] ids = m.getAppWidgetIds(new ComponentName(c, ChatWidget.class));
-        for (int id : ids) {
-            m.updateAppWidget(id, build(c, id));
+        Class<?>[] kinds = {ChatWidget.class, ChatWidgetSquare.class};
+        for (Class<?> k : kinds) {
+            int[] ids = m.getAppWidgetIds(new ComponentName(c, k));
+            for (int id : ids) {
+                m.updateAppWidget(id, build(c, id));
+            }
         }
+    }
+
+    private static boolean isSquare(Context c, int id) {
+        if (id == 0) return false;
+        AppWidgetProviderInfo info = AppWidgetManager.getInstance(c).getAppWidgetInfo(id);
+        return info != null && info.provider != null
+                && ChatWidgetSquare.class.getName().equals(info.provider.getClassName());
     }
 
     private static PendingIntent activity(Context c, int req, Intent i) {
@@ -79,7 +90,7 @@ public class ChatWidget extends AppWidgetProvider {
     static RemoteViews build(Context c, int id) {
         Dest d = WidgetCfg.get(c, id);
         RemoteViews v = render(c, id, d);
-        if (!isClaude(d)) applyStyle(v, WidgetStyle.load(c));
+        if (brand(d) == 0) applyStyle(v, WidgetStyle.load(c));
         return v;
     }
 
@@ -95,15 +106,25 @@ public class ChatWidget extends AppWidgetProvider {
         return v;
     }
 
-    /** El widget de Claude tiene su propio diseño (negro con naranja). */
-    private static boolean isClaude(Dest d) {
-        return d != null && "com.anthropic.claude".equals(d.pkg);
+    /** 0 genérico, 1 Claude, 2 ChatGPT, 3 Grok: cada uno con su propio diseño. */
+    private static int brand(Dest d) {
+        if (d == null) return 0;
+        if ("com.anthropic.claude".equals(d.pkg)) return 1;
+        if ("com.openai.chatgpt".equals(d.pkg)) return 2;
+        if ("ai.x.grok".equals(d.pkg)) return 3;
+        return 0;
     }
 
     private static RemoteViews render(Context c, int id, Dest d) {
-        boolean claude = isClaude(d);
-        RemoteViews v = new RemoteViews(c.getPackageName(),
-                claude ? R.layout.widget_claude : R.layout.widget_chat);
+        int brand = brand(d);
+        boolean claude = brand == 1;
+        boolean dark = brand == 2 || brand == 3;
+        boolean sq = isSquare(c, id);
+        int layout;
+        if (claude) layout = sq ? R.layout.widget_claude_sq : R.layout.widget_claude;
+        else if (dark) layout = sq ? R.layout.widget_dark_sq : R.layout.widget_dark;
+        else layout = sq ? R.layout.widget_chat_sq : R.layout.widget_chat;
+        RemoteViews v = new RemoteViews(c.getPackageName(), layout);
 
         if (d == null) {
             v.setImageViewResource(R.id.w_icon, R.drawable.ic_chat);
@@ -114,11 +135,17 @@ public class ChatWidget extends AppWidgetProvider {
             return v;
         }
 
-        Bitmap icon = (claude || d.pkg.isEmpty()) ? null : IconUtil.appIcon(c, d.pkg);
+        Bitmap icon = (brand != 0 || d.pkg.isEmpty()) ? null : IconUtil.appIcon(c, d.pkg);
         if (claude) {
             v.setImageViewResource(R.id.w_icon, R.drawable.ic_claude_star);
             v.setInt(R.id.w_send, "setColorFilter", 0xFFF28C5A);
             v.setInt(R.id.w_clock, "setColorFilter", 0xFFFFFFFF);
+        } else if (dark) {
+            int logo = brand == 2 ? R.drawable.ic_chatgpt : R.drawable.ic_grok;
+            v.setImageViewResource(R.id.w_icon, logo);
+            v.setImageViewResource(R.id.w_mark, logo);
+            v.setInt(R.id.w_mark, "setColorFilter", 0x2EFFFFFF);
+            v.setTextViewText(R.id.w_bar, brand == 3 ? "Pregunta a Grok…" : "Escribe un mensaje…");
         } else if (icon != null) {
             v.setImageViewBitmap(R.id.w_icon, icon);
         } else {
