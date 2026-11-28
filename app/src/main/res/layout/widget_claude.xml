@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/claude_bg">
+
+    <ImageView
+        android:layout_width="130dp"
+        android:layout_height="110dp"
+        android:layout_gravity="top|end"
+        android:scaleType="fitXY"
+        android:src="@drawable/claude_flower" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/w_icon"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_claude_star" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/w_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="serif"
+                    android:maxLines="1"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/w_sub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#FFA9A9B3"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/w_box"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:layout_weight="1"
+            android:background="@drawable/claude_box"
+            android:ellipsize="end"
+            android:gravity="center_vertical"
+            android:maxLines="3"
+            android:padding="12dp"
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/w_bar"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/claude_bar"
+                android:gravity="center_vertical"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="Escribe un mensaje…"
+                android:textColor="#FFC9CAD6"
+                android:textSize="16sp" />
+
+            <ImageButton
+                android:id="@+id/w_clock"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/claude_btn_clock"
+                android:contentDescription="Programar"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_clock" />
+
+            <ImageButton
+                android:id="@+id/w_send"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/claude_btn_send"
+                android:contentDescription="Enviar"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_send" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

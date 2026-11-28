@@ -77,8 +77,9 @@ public class ChatWidget extends AppWidgetProvider {
 
     /** Widget real de la pantalla de inicio. */
     static RemoteViews build(Context c, int id) {
-        RemoteViews v = render(c, id, WidgetCfg.get(c, id));
-        applyStyle(v, WidgetStyle.load(c));
+        Dest d = WidgetCfg.get(c, id);
+        RemoteViews v = render(c, id, d);
+        if (!isClaude(d)) applyStyle(v, WidgetStyle.load(c));
         return v;
     }
 
@@ -94,8 +95,15 @@ public class ChatWidget extends AppWidgetProvider {
         return v;
     }
 
+    /** El widget de Claude tiene su propio diseño (negro con naranja). */
+    private static boolean isClaude(Dest d) {
+        return d != null && "com.anthropic.claude".equals(d.pkg);
+    }
+
     private static RemoteViews render(Context c, int id, Dest d) {
-        RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_chat);
+        boolean claude = isClaude(d);
+        RemoteViews v = new RemoteViews(c.getPackageName(),
+                claude ? R.layout.widget_claude : R.layout.widget_chat);
 
         if (d == null) {
             v.setImageViewResource(R.id.w_icon, R.drawable.ic_chat);
@@ -106,8 +114,12 @@ public class ChatWidget extends AppWidgetProvider {
             return v;
         }
 
-        Bitmap icon = d.pkg.isEmpty() ? null : IconUtil.appIcon(c, d.pkg);
-        if (icon != null) {
+        Bitmap icon = (claude || d.pkg.isEmpty()) ? null : IconUtil.appIcon(c, d.pkg);
+        if (claude) {
+            v.setImageViewResource(R.id.w_icon, R.drawable.ic_claude_star);
+            v.setInt(R.id.w_send, "setColorFilter", 0xFFF28C5A);
+            v.setInt(R.id.w_clock, "setColorFilter", 0xFFFFFFFF);
+        } else if (icon != null) {
             v.setImageViewBitmap(R.id.w_icon, icon);
         } else {
             v.setImageViewResource(R.id.w_icon, d.kind == Dest.K_SMS ? R.drawable.ic_chat : R.drawable.ic_send);
